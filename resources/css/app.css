@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  --color-ink: #0a0a0a;
+  --color-ink-2: #131313;
+  --color-ink-3: #1a1a1a;
+  --color-paper: #f2f2ee;
+  --color-acid: #d4ff00;
+  --color-signal: #ff4400;
+}
+
+@layer base {
+  html, body { background: var(--color-ink); color: var(--color-paper); }
+  body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--color-acid); color: var(--color-ink); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-ink); }
+  ::-webkit-scrollbar-thumb { background: rgba(242,242,238,0.10); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-acid); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 40s linear infinite; }
+
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal { animation: revealUp 0.5s cubic-bezier(.2,.7,.2,1) both; }
