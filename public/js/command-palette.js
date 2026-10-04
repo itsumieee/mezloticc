@@ -52,6 +52,9 @@
         const actions = [
             { label: 'Home · Account checker', hint: 'HOME', url: '/' },
             { label: 'Recent searches', hint: 'HISTORY', url: '/history' },
+            { label: 'Compare accounts', hint: 'COMPARE', url: '/compare' },
+            { label: 'Watchlist', hint: 'WATCHLIST', url: '/watchlist' },
+            { label: 'Public API documentation', hint: 'API', url: '/api-docs' },
         ].filter(item => !normalized || item.label.toLowerCase().includes(normalized));
 
         if (matchingPages.length) appendGroup('Dashboard', matchingPages);

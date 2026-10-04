@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'roblox' => [
+        'timeout' => env('ROBLOX_API_TIMEOUT', 10),
+        'retries' => env('ROBLOX_API_RETRY', 2),
+        'retry_delay' => env('ROBLOX_API_RETRY_DELAY', 500),
+    ],
+
 ];

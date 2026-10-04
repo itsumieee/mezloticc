@@ -6,6 +6,7 @@
 
 <x-page-header num="01" title="Overview"
               :meta="'User · ' . ($profile['name'] ?? 'unknown') . ' · ' . $userId">
+    @include('partials.watch-button', ['userId' => $userId])
     @include('partials.refresh-button', ['userId' => $userId])
 </x-page-header>
 
@@ -41,6 +42,8 @@
             <p class="profile-username">
                 {{ '@'.($profile['name'] ?? 'unknown') }}
             </p>
+            @include('partials.presence', ['presence' => $presence])
+            @include('partials.creator-communities', compact('experiences', 'communities'))
         </div>
 
         <div class="profile-metadata">
@@ -72,6 +75,8 @@
     <span class="section-note">PUBLIC DATA</span>
 </div>
 
+@include('partials.trend', ['snapshots' => $snapshots])
+
 <div class="overview-metrics" data-reveal="scale">
     @foreach([
         ['01', 'Limited',    $stats['limited'] ?? 0,                false],
@@ -91,6 +96,8 @@
         </div>
     @endforeach
 </div>
+
+@include('partials.presence-activity', ['topGames' => $topGames, 'recentPresence' => $recentPresence])
 
 @if(!empty($statsErrors))
     <p class="mt-5 font-mono text-[9px] tracking-wider text-signal">

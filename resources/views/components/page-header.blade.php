@@ -20,7 +20,12 @@
         </div>
 
         @if(!$slot->isEmpty())
-            <div class="flex flex-wrap gap-3">{{ $slot }}</div>
+            <div class="flex flex-wrap gap-3">
+                @if(request()->routeIs('dashboard.*'))
+                    @include('partials.share-button')
+                @endif
+                {{ $slot }}
+            </div>
         @endif
     </div>
 </div>

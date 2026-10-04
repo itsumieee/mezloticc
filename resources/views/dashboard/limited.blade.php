@@ -6,6 +6,7 @@
 
 <x-page-header num="04" title="Limited"
               :meta="'Collectibles · ' . count($items) . ' / ' . ($total ?? '—')">
+    @include('partials.export-menu', ['userId' => $userId, 'category' => 'collectibles'])
     @include('partials.refresh-button', ['userId' => $userId])
 </x-page-header>
 
@@ -28,10 +29,27 @@
             </a>
     @endif
 @else
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-white/8 border border-white/8" data-reveal="scale">
+    @include('partials.filter-bar', [
+        'sortOptions' => [
+            'default' => 'Default',
+            'rap_desc' => 'RAP · High → Low',
+            'rap_asc' => 'RAP · Low → High',
+            'name_asc' => 'Name · A → Z',
+            'name_desc' => 'Name · Z → A',
+            'id_asc' => 'Asset ID · Asc',
+            'id_desc' => 'Asset ID · Desc',
+        ],
+        'currentSort' => 'default',
+    ])
+
+    <div id="assetGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-white/8 border border-white/8">
         @foreach($items as $i => $item)
             @php $assetId = $item['assetId'] ?? null; @endphp
-            <div class="bg-ink">
+            <div data-item
+                 data-name="{{ $item['name'] ?? '' }}"
+                 data-asset-id="{{ $assetId }}"
+                 data-rap="{{ $item['recentAveragePrice'] ?? '' }}"
+                 class="bg-ink">
                 <x-asset-card :item="$item"
                               :thumbnail="$assetId ? ($thumbnails[$assetId] ?? null) : null"
                               :num="str_pad($i + 1, 3, '0', STR_PAD_LEFT)" />

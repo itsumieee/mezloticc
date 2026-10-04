@@ -20,6 +20,9 @@ class RobloxApiService
     private const INVENTORY_BASE = 'https://inventory.roblox.com';
     private const AVATAR_BASE    = 'https://avatar.roblox.com';
     private const CATALOG_BASE   = 'https://catalog.roblox.com';
+    private const GAMES_BASE     = 'https://games.roblox.com';
+    private const GROUPS_BASE    = 'https://groups.roblox.com';
+    private const PRESENCE_BASE  = 'https://presence.roblox.com';
     private const THUMB_BASE     = 'https://thumbnails.roblox.com';
     private const ECONOMY_BASE   = 'https://economy.roblox.com';
 
@@ -48,11 +51,16 @@ class RobloxApiService
     /* ------------------------------------------------------------------ */
     private function client()
     {
-        return Http::timeout(self::TIMEOUT)
-            ->retry(self::RETRY_TIMES, self::RETRY_DELAY, function ($exception) {
-                return $exception instanceof \Illuminate\Http\Client\ConnectionException
-                    || ($exception->response && $exception->response->status() === 429);
-            })
+        return Http::timeout((int) config('services.roblox.timeout', self::TIMEOUT))
+            ->retry(
+                (int) config('services.roblox.retries', self::RETRY_TIMES),
+                (int) config('services.roblox.retry_delay', self::RETRY_DELAY),
+                function ($exception) {
+                    return $exception instanceof \Illuminate\Http\Client\ConnectionException
+                        || ($exception->response && $exception->response->status() === 429);
+                },
+                throw: false,
+            )
             ->withHeaders([
                 'User-Agent' => 'RobloxAccountChecker/1.0 (Laravel)',
                 'Accept'     => 'application/json',
@@ -107,6 +115,17 @@ class RobloxApiService
                 ]);
                 return null;
             }
+        });
+    }
+
+    public function getUserById(int $userId): ?array
+    {
+        if ($userId < 1) {
+            return null;
+        }
+
+        return Cache::remember("roblox.user.by_id.{$userId}", now()->addMinutes(15), function () use ($userId) {
+            return $this->getUserProfile($userId);
         });
     }
 
@@ -470,7 +489,135 @@ class RobloxApiService
     }
 
     /* ------------------------------------------------------------------ */
-    /* 10. Get bundles owned by user                                       */
+    /* 10. Get current public presence and game                             */
+    /* POST /v1/presence/users                                             */
+    /* ------------------------------------------------------------------ */
+    public function getUserPresence(int $userId): array
+    {
+        return Cache::remember("roblox.presence.{$userId}", now()->addMinutes(2), function () use ($userId) {
+            try {
+                $response = $this->client()->post(self::PRESENCE_BASE . '/v1/presence/users', [
+                    'userIds' => [$userId],
+                ]);
+
+                if ($response->failed()) {
+                    return ['status' => 'Unavailable', 'status_key' => 'unavailable', 'game_name' => null, 'game_url' => null, 'place_id' => null, 'universe_id' => null, 'last_online' => null];
+                }
+
+                $presence = $response->json('userPresences.0');
+                if (!is_array($presence) || !array_key_exists('userPresenceType', $presence)) {
+                    return ['status' => 'Unavailable', 'status_key' => 'unavailable', 'game_name' => null, 'game_url' => null, 'place_id' => null, 'universe_id' => null, 'last_online' => null];
+                }
+
+                $presenceType = (int) $presence['userPresenceType'];
+                $status = match ($presenceType) {
+                    2 => ['In game', 'in-game'],
+                    1, 3 => ['Online', 'online'],
+                    default => ['Offline', 'offline'],
+                };
+                $gameName = null;
+                $gameUrl = null;
+                $universeId = (int) ($presence['universeId'] ?? 0);
+
+                if ($presenceType === 2 && $universeId > 0) {
+                    $gameResponse = $this->client()->get(self::GAMES_BASE . '/v1/games', [
+                        'universeIds' => $universeId,
+                    ]);
+
+                    if ($gameResponse->successful()) {
+                        $gameName = $gameResponse->json('data.0.name');
+                    }
+
+                    $placeId = (int) ($presence['placeId'] ?? 0);
+                    $gameUrl = $placeId > 0
+                        ? "https://www.roblox.com/games/{$placeId}"
+                        : "https://www.roblox.com/games?universeId={$universeId}";
+                }
+
+                return [
+                    'status' => $status[0],
+                    'status_key' => $status[1],
+                    'game_name' => $gameName,
+                    'game_url' => $gameUrl,
+                    'place_id' => (int) ($presence['placeId'] ?? 0) ?: null,
+                    'universe_id' => $universeId ?: null,
+                    'last_online' => $presence['lastOnline'] ?? null,
+                ];
+            } catch (\Throwable $e) {
+                Log::warning("Presence fetch failed for {$userId}", ['error' => $e->getMessage()]);
+                return ['status' => 'Unavailable', 'status_key' => 'unavailable', 'game_name' => null, 'game_url' => null, 'place_id' => null, 'universe_id' => null, 'last_online' => null];
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 11. Get public experiences created by user                          */
+    /* GET /v2/users/{userId}/games                                        */
+    /* ------------------------------------------------------------------ */
+    public function getOwnedExperiences(int $userId): array
+    {
+        return Cache::remember("roblox.experiences.{$userId}", now()->addMinutes(30), function () use ($userId) {
+            try {
+                $response = $this->client()->get(self::GAMES_BASE . "/v2/users/{$userId}/games", [
+                    'accessFilter' => 2,
+                    'limit' => 50,
+                    'sortOrder' => 'Asc',
+                ]);
+
+                if ($response->failed()) {
+                    return [];
+                }
+
+                return collect($response->json('data') ?? [])
+                    ->filter(fn (array $game): bool => !empty($game['id']) && !empty($game['name']))
+                    ->map(fn (array $game): array => [
+                        'id' => (int) $game['id'],
+                        'name' => $game['name'],
+                        'playing' => (int) ($game['playing'] ?? 0),
+                        'visits' => (int) ($game['visits'] ?? 0),
+                    ])
+                    ->values()
+                    ->all();
+            } catch (\Throwable $e) {
+                Log::warning("Experience fetch failed for {$userId}", ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 12. Get communities/groups for user                                 */
+    /* GET /v2/users/{userId}/groups/roles                                  */
+    /* ------------------------------------------------------------------ */
+    public function getCommunities(int $userId): array
+    {
+        return Cache::remember("roblox.communities.{$userId}", now()->addMinutes(30), function () use ($userId) {
+            try {
+                $response = $this->client()->get(self::GROUPS_BASE . "/v2/users/{$userId}/groups/roles");
+
+                if ($response->failed()) {
+                    return [];
+                }
+
+                return collect($response->json('data') ?? [])
+                    ->filter(fn (array $entry): bool => !empty($entry['group']['id']) && !empty($entry['group']['name']))
+                    ->map(fn (array $entry): array => [
+                        'id' => (int) $entry['group']['id'],
+                        'name' => $entry['group']['name'],
+                        'role' => $entry['role']['name'] ?? 'Member',
+                        'member_count' => (int) ($entry['group']['memberCount'] ?? 0),
+                    ])
+                    ->values()
+                    ->all();
+            } catch (\Throwable $e) {
+                Log::warning("Community fetch failed for {$userId}", ['error' => $e->getMessage()]);
+                return [];
+            }
+        });
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 13. Get bundles owned by user                                       */
     /* GET /v1/users/{userId}/bundles/{bundleType}                         */
     /* bundleType: 1 = Outfit bundles                                      */
     /* ------------------------------------------------------------------ */
@@ -674,7 +821,7 @@ class RobloxApiService
 
         return [
             'total_rap'   => $totalRap,
-            'average_rap' => $itemCount > 0 ? round($totalRap / $itemCount) : 0,
+            'average_rap' => $itemCount > 0 ? (int) round($totalRap / $itemCount) : 0,
             'item_count'  => $itemCount,
             'highest'     => $highest,
             'lowest'      => $lowest,

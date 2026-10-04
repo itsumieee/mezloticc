@@ -44,15 +44,15 @@
 
     <form method="POST" action="{{ route('search') }}" id="searchForm" class="search-panel" data-reveal>
         @csrf
-        <label for="usernameInput">Roblox username</label>
+        <label for="usernameInput">Roblox username or ID</label>
         <div class="search-control">
             <span class="search-prefix" aria-hidden="true">@</span>
             <input class="search-input" type="text" name="username" id="usernameInput"
-                     value="{{ old('username', request('q')) }}" placeholder="builderman" required autofocus autocomplete="off">
+                     value="{{ old('username', request('q')) }}" placeholder="builderman or 156" required autofocus autocomplete="off">
             <button class="search-submit" type="submit" id="searchBtn"><span id="btnText">Check profile</span></button>
         </div>
         <div class="search-meta">
-            <span>Enter a username, not a display name</span>
+            <span>Enter a username or numeric user ID</span>
             <span>Press Enter · Ctrl K</span>
         </div>
     </form>
@@ -64,7 +64,12 @@
         <div class="home-footer-meta">
             <span>Public API</span><span>Cached · rate limited</span><span>Privacy first</span>
         </div>
-        <a href="{{ route('history') }}" class="editorial-link">Recent searches <span aria-hidden="true">↗</span></a>
+        <nav class="home-footer-nav" aria-label="More tools">
+            <a href="{{ route('compare.form') }}" class="editorial-link">Compare</a>
+            <a href="{{ route('watchlist.index') }}" class="editorial-link">Watchlist</a>
+            <a href="{{ route('history') }}" class="editorial-link editorial-link-history">Recent searches</a>
+            <a href="{{ route('api.docs') }}" class="editorial-link">API docs</a>
+        </nav>
     </footer>
 </div>
 

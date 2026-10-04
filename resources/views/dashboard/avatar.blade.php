@@ -13,7 +13,7 @@
     @if($avatarUrl)
         <img src="{{ $avatarUrl }}" alt=""
              class="max-h-[600px] object-contain"
-             style="filter: drop-shadow(0 20px 60px rgba(212,255,0,0.08));">
+               style="filter: drop-shadow(0 20px 60px rgba(0,0,0,0.08));">
     @else
         <p class="font-serif italic text-2xl text-paper/50">Avatar rendering unavailable.</p>
     @endif

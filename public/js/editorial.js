@@ -27,17 +27,6 @@
     }
 
     if (pointerFine && !reducedMotion) {
-        root.classList.add('has-pointer');
-        let pointerFrame = 0;
-        window.addEventListener('pointermove', (event) => {
-            if (pointerFrame) return;
-            pointerFrame = window.requestAnimationFrame(() => {
-                root.style.setProperty('--pointer-x', `${event.clientX}px`);
-                root.style.setProperty('--pointer-y', `${event.clientY}px`);
-                pointerFrame = 0;
-            });
-        }, { passive: true });
-
         document.querySelectorAll('.editorial-card').forEach((card) => {
             card.addEventListener('pointermove', (event) => {
                 const bounds = card.getBoundingClientRect();

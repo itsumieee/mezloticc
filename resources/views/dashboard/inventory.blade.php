@@ -6,6 +6,7 @@
 
 <x-page-header num="03" title="Inventory"
               :meta="'Public Roblox items'">
+    @include('partials.export-menu', ['userId' => $userId, 'category' => $assetTypeId])
     @include('partials.refresh-button', ['userId' => $userId])
 </x-page-header>
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CachedInventory;
 use App\Models\CachedUser;
 use App\Models\SearchHistory;
+use App\Services\RolimonsService;
 use App\Services\RobloxApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -200,6 +201,8 @@ class DashboardEnhancementsTest extends TestCase
                 'highest' => ['name' => 'Limited B', 'rap' => 35],
                 'lowest' => ['name' => 'Limited A', 'rap' => 20],
             ]);
+        $rolimons = $this->mock(RolimonsService::class);
+        $rolimons->shouldReceive('getUserAssets')->once()->with(156)->andReturn(null);
 
         $this->get(route('dashboard.value', 156))
             ->assertOk()
@@ -273,6 +276,19 @@ class DashboardEnhancementsTest extends TestCase
         $roblox->shouldReceive('getInventoryCategoryTotal')->once()->with(156, 61)
             ->andReturn(['total' => 1, 'error' => null]);
         $roblox->shouldReceive('getAvatarHeadshot')->once()->with(156)->andReturn(null);
+        $roblox->shouldReceive('getUserPresence')->once()->with(156)->andReturn([
+            'status' => 'In game',
+            'status_key' => 'in-game',
+            'game_name' => 'LONNN World',
+            'game_url' => 'https://www.roblox.com/games/987',
+            'last_online' => '2026-09-28T10:30:00.000Z',
+        ]);
+        $roblox->shouldReceive('getOwnedExperiences')->once()->with(156)->andReturn([
+            ['id' => 987, 'name' => 'LONNN World', 'playing' => 4, 'visits' => 1234],
+        ]);
+        $roblox->shouldReceive('getCommunities')->once()->with(156)->andReturn([
+            ['id' => 654, 'name' => 'LONNN Community', 'role' => 'Owner', 'member_count' => 42],
+        ]);
         $roblox->shouldReceive('canViewInventory')->once()->with(156)->andReturn(true);
 
         $this->get(route('dashboard.overview', 156))
@@ -280,7 +296,14 @@ class DashboardEnhancementsTest extends TestCase
             ->assertSeeText('Index')
             ->assertSeeText('09')
             ->assertSeeText('Home / Check')
+            ->assertSeeText('Watch')
+            ->assertSee(route('og.image', 156), false)
             ->assertSeeText('@ilonabevan56708')
+            ->assertSeeText('In game')
+            ->assertSeeText('Playing')
+            ->assertSeeText('28.09.2026 10:30')
+            ->assertSeeText('LONNN World')
+            ->assertSeeText('LONNN Community')
             ->assertSee('aria-label="Verified Roblox account"', false)
             ->assertDontSee('{{ $profile[\'name\']')
             ->assertViewHas('stats', static fn (array $stats): bool => $stats['animations'] === 1);
@@ -295,6 +318,14 @@ class DashboardEnhancementsTest extends TestCase
             'hasVerifiedBadge' => true,
         ]);
         $roblox->shouldReceive('getAvatarHeadshot')->once()->with(156, '420x420')->andReturn(null);
+        $roblox->shouldReceive('getUserPresence')->once()->with(156)->andReturn([
+            'status' => 'Offline',
+            'status_key' => 'offline',
+            'game_name' => null,
+            'game_url' => null,
+        ]);
+        $roblox->shouldReceive('getOwnedExperiences')->once()->with(156)->andReturn([]);
+        $roblox->shouldReceive('getCommunities')->once()->with(156)->andReturn([]);
 
         $this->get(route('dashboard.profile', 156))
             ->assertOk()
@@ -310,6 +341,14 @@ class DashboardEnhancementsTest extends TestCase
             'hasVerifiedBadge' => false,
         ]);
         $roblox->shouldReceive('getAvatarHeadshot')->once()->with(156, '420x420')->andReturn(null);
+        $roblox->shouldReceive('getUserPresence')->once()->with(156)->andReturn([
+            'status' => 'Unavailable',
+            'status_key' => 'unavailable',
+            'game_name' => null,
+            'game_url' => null,
+        ]);
+        $roblox->shouldReceive('getOwnedExperiences')->once()->with(156)->andReturn([]);
+        $roblox->shouldReceive('getCommunities')->once()->with(156)->andReturn([]);
 
         $this->get(route('dashboard.profile', 156))
             ->assertOk()
@@ -318,7 +357,7 @@ class DashboardEnhancementsTest extends TestCase
 
     public function test_search_endpoint_returns_custom_rate_limit_page(): void
     {
-        for ($attempt = 0; $attempt < 20; $attempt++) {
+        for ($attempt = 0; $attempt < 30; $attempt++) {
             $this->post(route('search'), [])->assertRedirect();
         }
 

@@ -6,23 +6,23 @@
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-serif: "Instrument Serif", Georgia, serif;
 
-  --color-ink: #0a0a0a;
-  --color-ink-2: #131313;
-  --color-ink-3: #1a1a1a;
-  --color-paper: #f2f2ee;
-  --color-acid: #d4ff00;
-  --color-signal: #ff4400;
+  --color-ink: #090909;
+  --color-ink-2: #151313;
+  --color-ink-3: #211719;
+  --color-paper: #f3f0f0;
+  --color-acid: #e22630;
+  --color-signal: #ff5b64;
 }
 
 @layer base {
   html, body { background: var(--color-ink); color: var(--color-paper); }
   body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-  ::selection { background: var(--color-acid); color: var(--color-ink); }
+  ::selection { background: #e22630; color: #fff; }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--color-ink); }
-  ::-webkit-scrollbar-thumb { background: rgba(242,242,238,0.10); }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-acid); }
+  ::-webkit-scrollbar-track { background: #101010; }
+  ::-webkit-scrollbar-thumb { background: #4c3b3d; }
+  ::-webkit-scrollbar-thumb:hover { background: #e22630; }
 }
 
 @keyframes marquee {
@@ -36,3 +36,21 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .reveal { animation: revealUp 0.5s cubic-bezier(.2,.7,.2,1) both; }
+
+@media print {
+    body { background: #fff !important; color: #000 !important; }
+    header, aside, #itemModal, #cmdPalette, #mobileNav, #shortcutsPanel,
+    [id^="toast"], .animate-marquee {
+        display: none !important;
+    }
+    .bg-ink, .bg-ink-2 { background: #fff !important; }
+    .border-white\/8, .border-white\/15, .border-white\/12 {
+        border-color: #ddd !important;
+    }
+    .text-paper, .text-paper\/40, .text-paper\/60 { color: #000 !important; }
+    .text-acid { color: #000 !important; font-weight: 700; }
+    .grid { gap: 1px !important; }
+    h1, h2, h3 { page-break-after: avoid; }
+    a { text-decoration: none; color: #000; }
+    a[href]::after { content: " (" attr(href) ")"; font-size: 10px; color: #666; }
+}

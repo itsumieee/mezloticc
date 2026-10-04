@@ -24,6 +24,11 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
             <span>Search</span><kbd>Ctrl K</kbd>
         </button>
+        <a href="{{ route('compare.form') }}" class="hidden xl:inline-flex nav-command">Compare</a>
+        <a href="{{ route('watchlist.index') }}" class="hidden xl:inline-flex nav-command">Watchlist</a>
+        <button type="button" onclick="openShortcuts()" class="hidden md:block font-mono text-[10px] tracking-[0.2em] uppercase text-paper/40 hover:text-acid transition-colors">
+            ?
+        </button>
         <a href="{{ route('home') }}" class="nav-action">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
             <span>New check</span>

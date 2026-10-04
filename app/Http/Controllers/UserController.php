@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CachedUser;
 use App\Models\CachedInventory;
+use App\Models\AccountSnapshot;
+use App\Jobs\WarmUserCache;
 use App\Models\SearchHistory;
+use App\Models\PresenceSnapshot;
 use App\Services\RobloxApiService;
+use App\Services\RolimonsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,13 +20,25 @@ class UserController extends Controller
     public function search(Request $request, RobloxApiService $roblox): RedirectResponse
     {
         $validated = $request->validate([
-            'username' => ['required', 'string', 'max:20'],
+            'username' => ['required', 'string', 'max:50'],
         ]);
-        $username = trim($validated['username']);
-        $user = $roblox->getUserByUsername($username);
+        $identifier = trim($validated['username']);
+        $user = null;
+
+        if (ctype_digit($identifier)) {
+            $numericId = filter_var($identifier, FILTER_VALIDATE_INT, [
+                'options' => ['min_range' => 1],
+            ]);
+
+            if ($numericId !== false) {
+                $user = $roblox->getUserById($numericId);
+            }
+        }
+
+        $user ??= $roblox->getUserByUsername($identifier);
 
         SearchHistory::create([
-            'query' => $username,
+            'query' => $identifier,
             'resolved_user_id' => $user['id'] ?? null,
             'ip_address' => $request->ip(),
         ]);
@@ -30,6 +46,8 @@ class UserController extends Controller
         if (empty($user['id']) || !is_numeric($user['id'])) {
             return back()->withInput()->with('error', 'Roblox username was not found or is unavailable.');
         }
+
+        WarmUserCache::dispatch((int) $user['id'])->onQueue('default');
 
         return redirect()->route('dashboard.overview', ['userId' => (int) $user['id']]);
     }
@@ -41,6 +59,27 @@ class UserController extends Controller
         $wearing = $roblox->getCurrentlyWearing($userId) ?? [];
         $animations = $roblox->getInventoryCategoryTotal($userId, 24);
         $emotes = $roblox->getInventoryCategoryTotal($userId, 61);
+        $presence = $roblox->getUserPresence($userId);
+        $experiences = $roblox->getOwnedExperiences($userId);
+        $communities = $roblox->getCommunities($userId);
+        $trackingSince = now()->subDays(30);
+        $topGames = PresenceSnapshot::query()
+            ->where('roblox_user_id', $userId)
+            ->where('status_key', 'in-game')
+            ->whereNotNull('game_name')
+            ->where('observed_at', '>=', $trackingSince)
+            ->select('game_name', 'place_id', 'universe_id')
+            ->selectRaw('COUNT(*) as detections')
+            ->groupBy('game_name', 'place_id', 'universe_id')
+            ->orderByDesc('detections')
+            ->limit(3)
+            ->get();
+        $recentPresence = PresenceSnapshot::query()
+            ->where('roblox_user_id', $userId)
+            ->where('observed_at', '>=', $trackingSince)
+            ->latest('observed_at')
+            ->limit(12)
+            ->get();
 
         return view('dashboard.overview', [
             'userId' => $userId,
@@ -56,7 +95,19 @@ class UserController extends Controller
                 'Animations' => $animations['error'] ?? null,
                 'Emotes' => $emotes['error'] ?? null,
             ]),
+            'experiences' => $experiences,
+            'communities' => $communities,
+            'presence' => $presence,
+            'topGames' => $topGames,
+            'recentPresence' => $recentPresence,
             'visible' => $roblox->canViewInventory($userId),
+            'snapshots' => AccountSnapshot::query()
+                ->where('roblox_user_id', $userId)
+                ->orderByDesc('snapshot_date')
+                ->limit(30)
+                ->get()
+                ->reverse()
+                ->values(),
         ]);
     }
 
@@ -66,6 +117,9 @@ class UserController extends Controller
             'userId' => $userId,
             'profile' => $this->loadProfile($userId, $roblox),
             'avatarUrl' => $roblox->getAvatarHeadshot($userId, '420x420'),
+            'presence' => $roblox->getUserPresence($userId),
+            'experiences' => $roblox->getOwnedExperiences($userId),
+            'communities' => $roblox->getCommunities($userId),
         ]);
     }
 
@@ -312,7 +366,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function value(int $userId, RobloxApiService $roblox): View
+    public function value(int $userId, RobloxApiService $roblox, RolimonsService $rolimons): View
     {
         $limited = $roblox->getAllLimitedItems($userId);
 
@@ -320,6 +374,7 @@ class UserController extends Controller
             'userId' => $userId,
             'rapData' => $roblox->calculateTotalRap($limited['items'] ?? []),
             'error' => $limited['error'] ?? null,
+            'thirdParty' => $rolimons->getUserAssets($userId),
         ]);
     }
 
@@ -331,6 +386,7 @@ class UserController extends Controller
         }
 
         $keys = [
+            "roblox.user.by_id.{$userId}",
             "roblox.user.profile.{$userId}",
             "roblox.avatar.{$userId}",
             "roblox.wearing.{$userId}",

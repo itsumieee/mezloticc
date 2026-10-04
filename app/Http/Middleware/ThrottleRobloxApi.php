@@ -11,19 +11,27 @@ class ThrottleRobloxApi
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $key = 'roblox-search:'.$request->ip();
-        $maxAttempts = 20;
+        $ipKey = 'roblox-search:ip:'.$request->ip();
+        $globalKey = 'roblox-search:global';
         $decaySeconds = 60;
 
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
+        if (RateLimiter::tooManyAttempts($ipKey, 30)) {
+            $seconds = RateLimiter::availableIn($ipKey);
 
             return response()
                 ->view('errors.429', ['seconds' => $seconds], 429)
                 ->header('Retry-After', (string) $seconds);
         }
 
-        RateLimiter::hit($key, $decaySeconds);
+        if (RateLimiter::tooManyAttempts($globalKey, 500)) {
+            $seconds = RateLimiter::availableIn($globalKey);
+
+            return response('Service is busy. Please try again shortly.', 503)
+                ->header('Retry-After', (string) $seconds);
+        }
+
+        RateLimiter::hit($ipKey, $decaySeconds);
+        RateLimiter::hit($globalKey, $decaySeconds);
 
         return $next($request);
     }

@@ -36,7 +36,7 @@ $items = [
 <div class="mt-10 space-y-3 font-mono text-[10px] tracking-[0.2em] uppercase">
     <div class="flex justify-between">
         <span class="text-paper/30">User ID</span>
-        <span>{{ $uid }}</span>
+        <x-copy :value="$uid" />
     </div>
     <div class="flex justify-between">
         <span class="text-paper/30">Mode</span>
@@ -46,4 +46,15 @@ $items = [
         <span class="text-paper/30">Cache</span>
         <span>Active</span>
     </div>
+    <div class="flex justify-between">
+        <span class="text-paper/30">Session</span>
+        <span>{{ now()->format('H:i') }}</span>
+    </div>
+</div>
+
+<div class="mt-8 pt-6 border-t border-white/8">
+    <button onclick="openShortcuts()" class="font-mono text-[10px] tracking-[0.2em] uppercase text-paper/40 hover:text-acid transition-colors flex items-center gap-2">
+        <span class="border border-white/15 px-1.5 py-0.5">?</span>
+        <span>Keyboard shortcuts</span>
+    </button>
 </div>

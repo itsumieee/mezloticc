@@ -31,6 +31,8 @@
                                         </span>
                 @endif
             </div>
+            @include('partials.presence', ['presence' => $presence])
+            @include('partials.creator-communities', compact('experiences', 'communities'))
         </div>
 
         <div class="grid grid-cols-2 gap-8">
