@@ -1,17 +1,61 @@
-# Roblox Account Checker
+<div align="center">
 
-A Laravel-backed public game-profile index. The root page is a game launcher; selecting a supported title opens its own account tools. All application pages are React components served through Inertia; Laravel routes and services continue to handle Roblox profile lookup, inventory, watchlists, history, exports, and the public API.
+# PROFILE / INDEX
 
-## Stack
+**Public game profiles, organized in one place.**
 
-- Laravel 12 and Inertia.js
-- React 18, Vite, and Tailwind CSS
-- React Three Fiber / drei for a single lazy-loaded background scene
-- Framer Motion, Lenis, and GSAP ScrollTrigger
+An expanding collection of account tools for Roblox and other games.
 
-## Local setup
+<br />
 
-Requirements: PHP 8.2+, Composer, Node.js, and npm.
+![Laravel](https://img.shields.io/badge/Laravel-12-FF2D20?style=flat-square&logo=laravel&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=111827)
+![Inertia.js](https://img.shields.io/badge/Inertia.js-2-9553E9?style=flat-square&logo=inertia&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat-square&logo=vite&logoColor=white)
+
+</div>
+
+---
+
+## Tentang proyek
+
+**Profile / Index** adalah direktori game yang menghubungkan pengguna ke alat pemeriksaan profil publik. Pilih game dari halaman utama untuk membuka fitur yang tersedia. Antarmuka dibangun dengan React dan Inertia.js, sementara Laravel menangani routing, layanan, dan data dari API.
+
+> Data yang tidak tersedia dari sumber resmi ditampilkan sebagai tidak tersedia. Aplikasi tidak mengarang detail akun, jumlah item, rating, ataupun nilai.
+
+## Game dan fitur
+
+| Game | Status | Fitur |
+| --- | --- | --- |
+| **Roblox** | Tersedia | Pencarian profil publik, avatar, inventory, limited, bundle, statistik, riwayat, watchlist, perbandingan, serta ekspor data. |
+| **Mobile Legends: Bang Bang** | Pratinjau | Antarmuka laporan akun berdasarkan Player ID dan Server ID. Belum terhubung ke API MLBB; lookup, rating, koleksi skin, dan estimasi top-up belum tersedia. |
+| Free Fire, PUBG Mobile, Honor of Kings | Segera hadir | Kartu game informatif; alat pemeriksaan akun belum tersedia. |
+
+## Tampilan
+
+- Halaman utama berfungsi sebagai indeks game yang dapat dikembangkan.
+- Setiap game yang tersedia membuka halaman fiturnya sendiri.
+- Scene 3D latar bersama mengikuti gerakan halaman dan pointer, dengan dukungan tampilan responsif.
+- Animasi menghormati preferensi `prefers-reduced-motion`.
+
+## Teknologi
+
+| Bagian | Teknologi |
+| --- | --- |
+| Backend | Laravel 12, PHP 8.2+ |
+| Frontend | React 18, Inertia.js, Vite |
+| Styling | Tailwind CSS |
+| 3D & animasi | React Three Fiber, drei, Framer Motion, Lenis, GSAP ScrollTrigger |
+
+## Menjalankan secara lokal
+
+### Prasyarat
+
+- PHP 8.2 atau lebih baru
+- Composer
+- Node.js dan npm
+
+### Instalasi
 
 ```powershell
 composer install
@@ -19,23 +63,60 @@ Copy-Item .env.example .env
 php artisan key:generate
 php artisan migrate
 npm install
-npm run build
+```
+
+Jika file `.env` sudah ada, lewati perintah `Copy-Item`. Pastikan konfigurasi database pada `.env` sudah sesuai sebelum menjalankan migrasi.
+
+### Mode pengembangan
+
+Jalankan seluruh layanan pengembangan Laravel dan Vite:
+
+```powershell
 composer run dev
 ```
 
-`composer run dev` starts the Laravel server, queue listener, log tail, and Vite development server. If `.env` already exists, skip `Copy-Item`.
+Atau jalankan backend dan frontend secara terpisah di terminal masing-masing:
 
-For frontend-only development, run `npm run dev`; use `php artisan serve` in a second terminal.
+```powershell
+php artisan serve
+npm run dev
+```
 
-## React structure
+Untuk membuat build frontend produksi:
 
-- `resources/js/Pages/` — game index, Roblox lookup, MLBB preview, dashboard, compare, watchlist, history, API docs, and error pages.
-- `resources/js/Components/` — Shared search, profile, inventory, modal, navigation, and chart components.
-- `resources/js/Layouts/` — Shared Inertia application shell and navigation.
-- `resources/js/Components/GlobalScene.jsx` — One lazy-loaded desktop 3D scene, with a static mobile/reduced-motion fallback.
-- `resources/views/app.blade.php` — Inertia document mount only; no route-specific Blade views remain.
+```powershell
+npm run build
+```
 
-The `/mlbb` page is an account-report UI preview for Mobile Legends player ID and server ID. There is no MLBB data API configured yet, so account lookup, ratings, skin counts, skin catalogues, and top-up estimates are explicitly unavailable. Its JSON and SVG downloads are marked unverified and contain no fabricated account data.
-The `/` route is the expandable game index, `/roblox` opens the existing Roblox lookup, and `/mlbb` opens the Mobile Legends preview. The MLBB and Roblox tiles use user-supplied images at `public/images/games/`; other titles use locally hosted, original genre-inspired vector illustrations. Other game tiles are clearly marked as coming soon until their account tools are implemented.
+## Struktur frontend
 
-User-facing Roblox content comes from the existing app or actual Roblox API responses. Missing public profile data is shown as unavailable rather than fabricated.
+```text
+resources/
+├── js/
+│   ├── Components/   # Komponen UI bersama
+│   ├── Layouts/      # Shell dan navigasi Inertia
+│   └── Pages/        # Halaman game dan alat akun
+├── css/              # Gaya aplikasi
+└── views/
+    └── app.blade.php # Mount point Inertia
+```
+
+## Rute utama
+
+| Rute | Kegunaan |
+| --- | --- |
+| `/` | Indeks dan pemilih game |
+| `/roblox` | Alat akun Roblox |
+| `/mlbb` | Pratinjau laporan akun MLBB |
+| `/history` | Riwayat pencarian |
+| `/compare` | Perbandingan profil |
+| `/watchlist` | Daftar pantauan |
+| `/api-docs` | Dokumentasi API |
+| `/health` | Pemeriksaan kesehatan aplikasi |
+
+## Catatan data dan aset
+
+- Konten Roblox berasal dari aplikasi atau respons API Roblox yang tersedia untuk umum.
+- Halaman MLBB saat ini hanya pratinjau UI dan tidak mengklaim menghasilkan data akun nyata.
+- Gambar game MLBB dan Roblox berada di `public/images/games/`; ilustrasi judul lain yang belum tersedia dibuat lokal dan bergaya ilustratif.
+- Ekspor JSON/SVG pada pratinjau MLBB tidak memuat data akun terverifikasi.
