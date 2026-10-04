@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\PresenceSnapshot;
 use App\Models\Watchlist;
 use App\Services\RobloxApiService;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class WatchlistController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
         $items = Watchlist::query()->orderByDesc('last_checked_at')->paginate(25);
         $userIds = $items->getCollection()->pluck('roblox_user_id');
@@ -37,7 +38,7 @@ class WatchlistController extends Controller
             }
         }
 
-        return view('watchlist.index', [
+        return Inertia::render('Watchlist', [
             'items' => $items,
             'presence' => $presence,
             'alerts' => $alerts,

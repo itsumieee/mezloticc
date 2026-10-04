@@ -3,18 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Services\RobloxApiService;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class CompareController extends Controller
 {
-    public function form(): View
+    public function form(): Response
     {
-        return view('compare.form');
+        return Inertia::render('Compare/Form');
     }
 
-    public function compare(Request $request, RobloxApiService $roblox): View|RedirectResponse
+    public function compare(Request $request, RobloxApiService $roblox): Response|RedirectResponse
     {
         $validated = $request->validate([
             'a' => ['required', 'string', 'max:50'],
@@ -33,7 +34,7 @@ class CompareController extends Controller
         $dataA = $this->gather($roblox, (int) $userA['id']);
         $dataB = $this->gather($roblox, (int) $userB['id']);
 
-        return view('compare.result', compact('userA', 'userB', 'dataA', 'dataB'));
+        return Inertia::render('Compare/Result', compact('userA', 'userB', 'dataA', 'dataB'));
     }
 
     private function resolve(RobloxApiService $roblox, string $identifier): ?array

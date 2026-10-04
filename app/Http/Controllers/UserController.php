@@ -10,10 +10,11 @@ use App\Models\SearchHistory;
 use App\Models\PresenceSnapshot;
 use App\Services\RobloxApiService;
 use App\Services\RolimonsService;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\View\View;
 
 class UserController extends Controller
 {
@@ -52,7 +53,7 @@ class UserController extends Controller
         return redirect()->route('dashboard.overview', ['userId' => (int) $user['id']]);
     }
 
-    public function overview(int $userId, RobloxApiService $roblox): View
+    public function overview(int $userId, RobloxApiService $roblox): Response
     {
         $profile = $this->loadProfile($userId, $roblox);
         $limited = $roblox->getLimitedItemsTotal($userId);
@@ -81,7 +82,7 @@ class UserController extends Controller
             ->limit(12)
             ->get();
 
-        return view('dashboard.overview', [
+        return Inertia::render('Dashboard/Overview', [
             'userId' => $userId,
             'profile' => $profile,
             'headshot' => $roblox->getAvatarHeadshot($userId),
@@ -111,9 +112,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function profile(int $userId, RobloxApiService $roblox): View
+    public function profile(int $userId, RobloxApiService $roblox): Response
     {
-        return view('dashboard.profile', [
+        return Inertia::render('Dashboard/Profile', [
             'userId' => $userId,
             'profile' => $this->loadProfile($userId, $roblox),
             'avatarUrl' => $roblox->getAvatarHeadshot($userId, '420x420'),
@@ -123,7 +124,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function inventory(Request $request, int $userId, RobloxApiService $roblox): View
+    public function inventory(Request $request, int $userId, RobloxApiService $roblox): Response
     {
         $items = [];
         $error = null;
@@ -179,7 +180,7 @@ class UserController extends Controller
             ]);
         }
 
-        return view('dashboard.inventory', [
+        return Inertia::render('Dashboard/Inventory', [
             'userId' => $userId,
             'items' => $items,
             'thumbnails' => $roblox->getAssetThumbnails($assetIds),
@@ -192,7 +193,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function limited(Request $request, int $userId, RobloxApiService $roblox): View
+    public function limited(Request $request, int $userId, RobloxApiService $roblox): Response
     {
         $cursor = $request->query('cursor', '');
         abort_unless(is_string($cursor) && strlen($cursor) <= 2048, 400);
@@ -234,7 +235,7 @@ class UserController extends Controller
             ]);
         }
 
-        return view('dashboard.limited', [
+        return Inertia::render('Dashboard/Limited', [
             'userId' => $userId,
             'items' => $items,
             'total' => $totalResult['total'],
@@ -245,7 +246,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function animations(int $userId, RobloxApiService $roblox): View
+    public function animations(int $userId, RobloxApiService $roblox): Response
     {
         $animations = $roblox->getInventoryCategory($userId, 24, 100);
         $emotes = $roblox->getInventoryCategory($userId, 61, 100);
@@ -259,7 +260,7 @@ class UserController extends Controller
             $emoteTotal['error'] ?? null,
         ]);
 
-        return view('dashboard.animations', [
+        return Inertia::render('Dashboard/Animations', [
             'userId' => $userId,
             'items' => $items,
             'total' => !empty($errors)
@@ -269,20 +270,20 @@ class UserController extends Controller
         ]);
     }
 
-    public function avatar(int $userId, RobloxApiService $roblox): View
+    public function avatar(int $userId, RobloxApiService $roblox): Response
     {
-        return view('dashboard.avatar', [
+        return Inertia::render('Dashboard/Avatar', [
             'userId' => $userId,
             'avatarUrl' => $roblox->getAvatarThumbnail($userId),
             'wearing' => $roblox->getCurrentlyWearing($userId),
         ]);
     }
 
-    public function bundles(int $userId, RobloxApiService $roblox): View
+    public function bundles(int $userId, RobloxApiService $roblox): Response
     {
         $result = $roblox->getBundles($userId);
 
-        return view('dashboard.bundles', [
+        return Inertia::render('Dashboard/Bundles', [
             'userId' => $userId,
             'bundles' => $result['bundles'] ?? [],
             'total' => $result['total'] ?? null,
@@ -290,7 +291,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function statistics(int $userId, RobloxApiService $roblox): View
+    public function statistics(int $userId, RobloxApiService $roblox): Response
     {
         $limited = $roblox->getLimitedItemsTotal($userId);
         $wearing = $roblox->getCurrentlyWearing($userId) ?? [];
@@ -356,7 +357,7 @@ class UserController extends Controller
             $stats['faces'], $stats['shirts'], $stats['pants'], $stats['hair'],
         ];
 
-        return view('dashboard.statistics', [
+        return Inertia::render('Dashboard/Statistics', [
             'userId' => $userId,
             'stats' => $stats,
             'hasMore' => $hasMore,
@@ -366,13 +367,17 @@ class UserController extends Controller
         ]);
     }
 
-    public function value(int $userId, RobloxApiService $roblox, RolimonsService $rolimons): View
+    public function value(int $userId, RobloxApiService $roblox, RolimonsService $rolimons): Response
     {
         $limited = $roblox->getAllLimitedItems($userId);
 
-        return view('dashboard.value', [
+        return Inertia::render('Dashboard/Value', [
             'userId' => $userId,
             'rapData' => $roblox->calculateTotalRap($limited['items'] ?? []),
+            'rapValues' => array_values(array_filter(array_map(
+                'intval',
+                array_column($limited['items'] ?? [], 'recentAveragePrice')
+            ))),
             'error' => $limited['error'] ?? null,
             'thirdParty' => $rolimons->getUserAssets($userId),
         ]);
@@ -422,11 +427,11 @@ class UserController extends Controller
         return back()->with('status', 'Data refreshed. Fresh data will be fetched on the next page load.');
     }
 
-    public function history(): View
+    public function history(): Response
     {
         $history = SearchHistory::query()->orderByDesc('created_at')->limit(50)->get();
 
-        return view('history', compact('history'));
+        return Inertia::render('History', compact('history'));
     }
 
     private function loadProfile(int $userId, RobloxApiService $roblox): array

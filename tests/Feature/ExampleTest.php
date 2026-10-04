@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -12,11 +12,17 @@ class ExampleTest extends TestCase
      */
     public function test_the_application_returns_a_successful_response(): void
     {
-        $this->get('/?q=Builderman')
+        $this->get('/roblox?q=Builderman')
             ->assertOk()
-            ->assertSee('editorial-ticker', false)
-            ->assertSee('cmdPalette', false)
-            ->assertSee('aria-keyshortcuts="Control+K Meta+K"', false)
-            ->assertSee('value="Builderman"', false);
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Home')
+                ->where('query', 'Builderman'));
+    }
+
+    public function test_the_root_route_shows_the_game_index(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('GameHub'));
     }
 }

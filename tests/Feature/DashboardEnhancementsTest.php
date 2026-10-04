@@ -10,6 +10,7 @@ use App\Services\RobloxApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DashboardEnhancementsTest extends TestCase
@@ -25,9 +26,10 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('history'))
             ->assertOk()
-            ->assertSee('Search History')
-            ->assertSee('Builderman')
-            ->assertSee(route('dashboard.overview', 156));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('History')
+                ->where('history.0.query', 'Builderman')
+                ->where('history.0.resolved_user_id', 156));
     }
 
     public function test_refresh_clears_user_cache_and_database_cache_rows(): void
@@ -87,13 +89,12 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.inventory', 156))
             ->assertOk()
-            ->assertSee('aria-labelledby="modalTitle"', false)
-            ->assertSee('class="inventory-toolbar"', false)
-            ->assertSee('class="inventory-grid"', false)
-            ->assertSee('id="gridLoading"', false)
-            ->assertSee('Test Hat')
-            ->assertSee('cursor-next')
-            ->assertSee('Next →');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Inventory')
+                ->where('items.0.name', 'Test Hat')
+                ->where('total', 31)
+                ->where('thumbnails.123', 'https://example.test/hat.png')
+                ->where('nextUrl', fn (string $url): bool => str_contains($url, 'cursor-next')));
     }
 
     public function test_inventory_api_uses_a_supported_limit_instead_of_returning_zero(): void
@@ -206,7 +207,10 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.value', 156))
             ->assertOk()
-            ->assertSee('55');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Value')
+                ->where('rapData.total_rap', 55)
+                ->where('rapValues', [20, 35]));
     }
 
     public function test_limited_page_explains_a_successful_empty_collectibles_response(): void
@@ -225,10 +229,11 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.limited', 156))
             ->assertOk()
-            ->assertSee('0 / 225')
-            ->assertSeeText('No public collectible Limited items were returned by Roblox.')
-            ->assertSee('Regular hats, clothing and accessories are not counted as Limited collectibles.')
-            ->assertDontSeeText('Roblox could not return this inventory.');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Limited')
+                ->where('items', [])
+                ->where('total', 225)
+                ->where('error', null));
     }
 
     public function test_statistics_counts_emotes_when_animation_asset_type_is_empty(): void
@@ -254,8 +259,10 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.statistics', 156))
             ->assertOk()
-            ->assertViewHas('stats.animations', 9)
-            ->assertViewHas('chartValues', static fn (array $values): bool => $values[1] === 9);
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Statistics')
+                ->where('stats.animations', 9)
+                ->where('chartValues.1', 9));
     }
 
     public function test_overview_renders_username_with_at_sign_instead_of_blade_syntax(): void
@@ -293,20 +300,13 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.overview', 156))
             ->assertOk()
-            ->assertSeeText('Index')
-            ->assertSeeText('09')
-            ->assertSeeText('Home / Check')
-            ->assertSeeText('Watch')
-            ->assertSee(route('og.image', 156), false)
-            ->assertSeeText('@ilonabevan56708')
-            ->assertSeeText('In game')
-            ->assertSeeText('Playing')
-            ->assertSeeText('28.09.2026 10:30')
-            ->assertSeeText('LONNN World')
-            ->assertSeeText('LONNN Community')
-            ->assertSee('aria-label="Verified Roblox account"', false)
-            ->assertDontSee('{{ $profile[\'name\']')
-            ->assertViewHas('stats', static fn (array $stats): bool => $stats['animations'] === 1);
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Overview')
+                ->where('profile.name', 'ilonabevan56708')
+                ->where('profile.hasVerifiedBadge', true)
+                ->where('stats.animations', 1)
+                ->where('presence.game_name', 'LONNN World')
+                ->where('communities.0.name', 'LONNN Community'));
     }
 
     public function test_profile_shows_verified_badge_only_when_roblox_reports_it(): void
@@ -329,7 +329,9 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.profile', 156))
             ->assertOk()
-            ->assertSee('aria-label="Verified Roblox account"', false);
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Profile')
+                ->where('profile.hasVerifiedBadge', true));
     }
 
     public function test_profile_hides_verified_badge_when_roblox_does_not_report_it(): void
@@ -352,7 +354,9 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->get(route('dashboard.profile', 156))
             ->assertOk()
-            ->assertDontSee('aria-label="Verified Roblox account"', false);
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Profile')
+                ->where('profile.hasVerifiedBadge', false));
     }
 
     public function test_search_endpoint_returns_custom_rate_limit_page(): void
@@ -363,6 +367,10 @@ class DashboardEnhancementsTest extends TestCase
 
         $this->post(route('search'), [])
             ->assertStatus(429)
-            ->assertSeeText('Slow down');
+            ->assertHeader('Retry-After')
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Errors/ErrorPage')
+                ->where('status', 429)
+                ->has('seconds'));
     }
 }

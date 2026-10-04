@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,9 +19,14 @@ class ThrottleRobloxApi
         if (RateLimiter::tooManyAttempts($ipKey, 30)) {
             $seconds = RateLimiter::availableIn($ipKey);
 
-            return response()
-                ->view('errors.429', ['seconds' => $seconds], 429)
-                ->header('Retry-After', (string) $seconds);
+            $response = $request->expectsJson()
+                ? response()->json(['message' => 'Too many requests.', 'retry_after' => $seconds], 429)
+                : Inertia::render('Errors/ErrorPage', [
+                    'status' => 429,
+                    'seconds' => $seconds,
+                ])->toResponse($request)->setStatusCode(429);
+
+            return $response->header('Retry-After', (string) $seconds);
         }
 
         if (RateLimiter::tooManyAttempts($globalKey, 500)) {

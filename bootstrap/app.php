@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
         $middleware->append([
             \App\Http\Middleware\SecurityHeaders::class,
             \App\Http\Middleware\LogApiRequest::class,
@@ -28,6 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
             $traceId = request()->attributes->get('trace_id');
             if (is_string($traceId)) {
                 $response->headers->set('X-Trace-Id', $traceId);
+            }
+
+            if (! request()->expectsJson() && ! request()->is('api/*') && in_array($response->getStatusCode(), [404, 429, 500], true)) {
+                return \Inertia\Inertia::render('Errors/ErrorPage', [
+                    'status' => $response->getStatusCode(),
+                ])->toResponse(request())->setStatusCode($response->getStatusCode());
             }
 
             return $response;

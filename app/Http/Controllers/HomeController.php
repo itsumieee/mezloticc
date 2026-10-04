@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Contracts\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class HomeController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
-        return view('home');
+        return Inertia::render('GameHub');
+    }
+
+    public function roblox(): Response
+    {
+        return Inertia::render('Home', [
+            'query' => request('q', ''),
+        ]);
     }
 }

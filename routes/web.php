@@ -6,13 +6,16 @@ use App\Http\Controllers\ExportController;
 use App\Http\Controllers\CompareController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WatchlistController;
+use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/roblox', [HomeController::class, 'roblox'])->name('roblox.home');
+Route::get('/mlbb', fn () => Inertia::render('Mlbb'))->name('mlbb.index');
 Route::get('/health', [HealthController::class, 'check'])->name('health');
 Route::post('/search', [UserController::class, 'search'])->middleware('throttle.roblox')->name('search');
 Route::get('/history', [UserController::class, 'history'])->name('history');
-Route::view('/api-docs', 'api-docs')->name('api.docs');
+Route::get('/api-docs', fn () => Inertia::render('ApiDocs'))->name('api.docs');
 Route::get('/og/{userId}.svg', OgImageController::class)
     ->whereNumber('userId')
     ->middleware('throttle:30,1')

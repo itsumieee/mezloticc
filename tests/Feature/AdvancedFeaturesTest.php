@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AdvancedFeaturesTest extends TestCase
@@ -118,8 +119,10 @@ class AdvancedFeaturesTest extends TestCase
 
         $this->get(route('watchlist.index'))
             ->assertOk()
-            ->assertSeeText('Builderman')
-            ->assertSeeText('Roblox account');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Watchlist')
+                ->where('items.data.0.display_name', 'Builderman')
+                ->where('items.data.0.note', 'Roblox account'));
     }
 
     public function test_compare_resolves_and_renders_two_accounts(): void
@@ -149,9 +152,11 @@ class AdvancedFeaturesTest extends TestCase
 
         $this->post(route('compare'), ['a' => 'builderman', 'b' => 'testuser'])
             ->assertOk()
-            ->assertSeeText('Builderman')
-            ->assertSeeText('Test User')
-            ->assertSeeText('Total RAP');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Compare/Result')
+                ->where('userA.displayName', 'Builderman')
+                ->where('userB.displayName', 'Test User')
+                ->where('dataA.rap.total_rap', 0));
     }
 
     public function test_snapshot_command_records_one_daily_snapshot_per_watched_account(): void
@@ -252,7 +257,6 @@ class AdvancedFeaturesTest extends TestCase
     {
         $this->get(route('api.docs'))
             ->assertOk()
-            ->assertSeeText('Public API')
-            ->assertSeeText('/user/{userId}/limited');
+            ->assertInertia(fn (Assert $page) => $page->component('ApiDocs'));
     }
 }
